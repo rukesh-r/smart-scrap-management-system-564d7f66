@@ -32,38 +32,30 @@ const AdminDashboard = () => {
 
   const fetchStats = useCallback(async () => {
     try {
-      // Fetch user stats
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('role');
+      const [profilesRes, scrapItemsRes, transactionsRes] = await Promise.all([
+        supabase.from('profiles').select('role', { count: 'exact' }),
+        supabase.from('scrap_items').select('status', { count: 'exact' }),
+        supabase.from('transactions').select('amount')
+      ]);
 
-      if (profilesError) throw profilesError;
+      if (profilesRes.error) throw profilesRes.error;
+      if (scrapItemsRes.error) throw scrapItemsRes.error;
+      if (transactionsRes.error) throw transactionsRes.error;
 
-      // Fetch scrap items stats
-      const { data: scrapItems, error: scrapError } = await supabase
-        .from('scrap_items')
-        .select('status, expected_price, actual_price');
+      const profiles = profilesRes.data || [];
+      const scrapItems = scrapItemsRes.data || [];
+      const transactions = transactionsRes.data || [];
 
-      if (scrapError) throw scrapError;
+      const totalUsers = profiles.length;
+      const totalCustomers = profiles.filter(p => p.role === 'customer').length;
+      const totalBuyers = profiles.filter(p => p.role === 'buyer').length;
 
-      // Fetch transaction stats
-      const { data: transactions, error: transactionsError } = await supabase
-        .from('transactions')
-        .select('amount');
+      const totalScrapItems = scrapItems.length;
+      const availableItems = scrapItems.filter(item => item.status === 'available').length;
+      const soldItems = scrapItems.filter(item => item.status === 'sold').length;
 
-      if (transactionsError) throw transactionsError;
-
-      // Calculate stats
-      const totalUsers = profiles?.length || 0;
-      const totalCustomers = profiles?.filter(p => p.role === 'customer').length || 0;
-      const totalBuyers = profiles?.filter(p => p.role === 'buyer').length || 0;
-
-      const totalScrapItems = scrapItems?.length || 0;
-      const availableItems = scrapItems?.filter(item => item.status === 'available').length || 0;
-      const soldItems = scrapItems?.filter(item => item.status === 'sold').length || 0;
-
-      const totalTransactions = transactions?.length || 0;
-      const totalRevenue = transactions?.reduce((sum, t) => sum + (t.amount || 0), 0) || 0;
+      const totalTransactions = transactions.length;
+      const totalRevenue = transactions.reduce((sum, t) => sum + (t.amount || 0), 0);
 
       setStats({
         totalUsers,

@@ -86,6 +86,14 @@ const DashboardLayout = ({ children }: DashboardLayoutProps) => {
                 {getRoleIcon(currentRole)}
                 <span className="ml-1">{getRoleLabel(currentRole)}</span>
               </Badge>
+              <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')} className="hover:bg-green-200">
+                <Home className="h-4 w-4 mr-1" />
+                {t('Home')}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => navigate('/login-history')} className="hover:bg-green-200">
+                <History className="h-4 w-4 mr-1" />
+                {t('History')}
+              </Button>
             </div>
 
             <div className="flex items-center space-x-4">

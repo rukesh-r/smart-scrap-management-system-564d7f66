@@ -7,14 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Shield, Lock, Eye, EyeOff, LogOut, Smartphone, History, CheckCircle, XCircle } from 'lucide-react';
+import { Shield, Lock, Eye, EyeOff, LogOut, Smartphone } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { Tables } from '@/integrations/supabase/types';
 import { useTranslation } from '@/hooks/useTranslation';
 import TwoFactorSetup from '@/components/auth/TwoFactorSetup';
-
-type LoginHistoryEntry = Tables<'login_history'>;
 
 const SecuritySettings = () => {
   const { user, signOut } = useAuth();
@@ -29,9 +26,6 @@ const SecuritySettings = () => {
   });
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [showTwoFactorSetup, setShowTwoFactorSetup] = useState(false);
-  const [loginHistory, setLoginHistory] = useState<LoginHistoryEntry[]>([]);
-  const [loginHistoryLoading, setLoginHistoryLoading] = useState(true);
-  const [loginHistoryError, setLoginHistoryError] = useState<string | null>(null);
 
   const handlePasswordChange = async () => {
     if (!passwordData.new || passwordData.new !== passwordData.confirm) {
@@ -130,65 +124,9 @@ const SecuritySettings = () => {
     }
   };
 
-  const handleClearHistory = async () => {
-    if (!user?.id) return;
-
-    try {
-      const { error } = await supabase
-        .from('login_history')
-        .delete()
-        .eq('user_id', user.id);
-
-      if (error) throw error;
-
-      setLoginHistory([]);
-      toast({
-        title: t('Success'),
-        description: t('Login history cleared successfully'),
-      });
-    } catch (error: any) {
-      toast({
-        title: t('Error'),
-        description: error.message || t('Failed to clear login history'),
-        variant: 'destructive',
-      });
-    }
-  };
-
   useEffect(() => {
     checkTwoFactorStatus();
-    
-    const fetchLoginHistory = async () => {
-      if (!user?.id) return;
-
-      try {
-        setLoginHistoryLoading(true);
-        setLoginHistoryError(null);
-
-        const { data, error } = await supabase
-          .from('login_history')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('login_timestamp', { ascending: false })
-          .limit(5);
-
-        if (error) {
-          setLoginHistoryError(t('Failed to load login history'));
-          setLoginHistoryLoading(false);
-          return;
-        }
-
-        setLoginHistory(data || []);
-      } catch (error: any) {
-        setLoginHistoryError(t('Failed to load login history'));
-      } finally {
-        setLoginHistoryLoading(false);
-      }
-    };
-
-    const timer = setTimeout(fetchLoginHistory, 1000);
-    return () => clearTimeout(timer);
-  }, [user?.id, t]);
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -293,92 +231,6 @@ const SecuritySettings = () => {
           checkTwoFactorStatus();
         }}
       />
-
-      {/* Login History */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <History className="h-5 w-5" />
-              {t('Login History')}
-            </CardTitle>
-            {loginHistory.length > 0 && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" size="sm">
-                    {t('Clear History')}
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>{t('Clear Login History')}</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      {t('This will permanently delete all your login history records. This action cannot be undone.')}
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>{t('Cancel')}</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleClearHistory} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
-                      {t('Clear All')}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          {loginHistoryLoading ? (
-            <div className="text-sm text-muted-foreground">{t('Loading login history...')}</div>
-          ) : loginHistoryError ? (
-            <div className="text-sm text-destructive">{loginHistoryError}</div>
-          ) : loginHistory.length === 0 ? (
-            <div className="text-sm text-muted-foreground">{t('No login history available.')}</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('Date & Time')}</TableHead>
-                    <TableHead>{t('Device Info')}</TableHead>
-                    <TableHead>{t('Status')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {loginHistory.map((entry) => (
-                    <TableRow key={entry.id}>
-                      <TableCell>
-                        {new Date(entry.login_timestamp).toLocaleString()}
-                      </TableCell>
-                      <TableCell>
-                        {entry.user_agent ? (
-                          <span className="text-xs text-muted-foreground truncate max-w-32 block">
-                            {entry.user_agent.substring(0, 30)}...
-                          </span>
-                        ) : (
-                          'N/A'
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          {entry.success ? (
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                          ) : (
-                            <XCircle className="h-4 w-4 text-red-500" />
-                          )}
-                          <span className="text-xs">
-                            {entry.success ? t('Success') : t('Failed')}
-                          </span>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {/* Active Sessions */}
       <Card>
