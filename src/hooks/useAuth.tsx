@@ -54,73 +54,39 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string): Promise<Profile | null> => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle();
+    try {
+      const { data, error } = await Promise.race([
+        supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
+      ]) as any;
 
-    if (error) {
-      console.error('Error fetching profile:', error);
-      return null;
-    }
-    
-    // If no profile exists, create one
-    if (!data) {
-      const { data: userData } = await supabase.auth.getUser();
-      const fullName = userData?.user?.user_metadata?.full_name || 'User';
-      
-      const { data: newProfile, error: insertError } = await supabase
-        .from('profiles')
-        .insert({
-          user_id: userId,
-          full_name: fullName
-        })
-        .select()
-        .single();
-      
-      if (insertError) {
-        console.error('Error creating profile:', insertError);
+      if (error) {
+        console.error('Error fetching profile:', error);
         return null;
       }
-      
-      return newProfile as Profile;
+      return data as Profile | null;
+    } catch (error) {
+      console.error('Profile fetch timeout or error:', error);
+      return null;
     }
-    
-    return data as Profile | null;
   };
 
   const fetchUserRole = async (userId: string): Promise<UserRole | null> => {
-    const { data, error } = await supabase
-      .from('user_roles')
-      .select('*')
-      .eq('user_id', userId)
-      .maybeSingle();
+    try {
+      const { data, error } = await Promise.race([
+        supabase.from('user_roles').select('*').eq('user_id', userId).maybeSingle(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
+      ]) as any;
 
-    if (error) {
-      console.error('Error fetching user role:', error);
+      if (error) {
+        console.error('Error fetching user role:', error);
+        return null;
+      }
+      return data as UserRole | null;
+    } catch (error) {
+      console.error('User role fetch timeout or error:', error);
       return null;
     }
-    
-    // If no role exists, check if profile has a role and migrate it
-    if (!data) {
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('user_id', userId)
-        .single();
-      
-      if (profileData?.role) {
-        const { data: newRole } = await supabase
-          .from('user_roles')
-          .insert({ user_id: userId, role: profileData.role } as any)
-          .select()
-          .single();
-        return newRole as UserRole | null;
-      }
-    }
-    
-    return data as UserRole | null;
   };
 
   const refreshUserRole = async () => {
@@ -149,19 +115,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               user_agent: navigator.userAgent,
               login_method: session.user.app_metadata.provider || 'email',
               success: true
+            }).then(({ error }) => {
+              if (error) console.error('Login tracking error:', error);
             });
           }
           
-          // Fetch profile and role data when user is authenticated
-          setTimeout(async () => {
-            const [profileData, roleData] = await Promise.all([
-              fetchProfile(session.user.id),
-              fetchUserRole(session.user.id)
-            ]);
+          setLoading(false);
+          Promise.all([
+            fetchProfile(session.user.id),
+            fetchUserRole(session.user.id)
+          ]).then(([profileData, roleData]) => {
             setProfile(profileData);
             setUserRole(roleData);
-            setLoading(false);
-          }, 0);
+          });
         } else {
           setProfile(null);
           setUserRole(null);
@@ -170,10 +136,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     );
 
-    // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
+      setLoading(false);
       
       if (session?.user) {
         Promise.all([
@@ -182,10 +148,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         ]).then(([profileData, roleData]) => {
           setProfile(profileData);
           setUserRole(roleData);
-          setLoading(false);
         });
-      } else {
-        setLoading(false);
       }
     });
 
@@ -229,6 +192,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     try {
+      // Log logout time for the most recent active session
+      if (user?.id) {
+        const { data: activeSession } = await supabase
+          .from('login_history')
+          .select('id')
+          .eq('user_id', user.id)
+          .is('logout_timestamp', null)
+          .order('login_timestamp', { ascending: false })
+          .limit(1)
+          .single();
+
+        if (activeSession) {
+          await supabase
+            .from('login_history')
+            .update({ logout_timestamp: new Date().toISOString() })
+            .eq('id', activeSession.id);
+        }
+      }
+      
       // Clear local state immediately
       setUser(null);
       setSession(null);

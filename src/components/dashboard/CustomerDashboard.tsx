@@ -35,6 +35,9 @@ const CustomerDashboard = () => {
   const fetchScrapItems = async () => {
     if (!profile) return;
 
+    // Revert expired pending items (non-blocking)
+    supabase.rpc('revert_expired_pending_items').then().catch(() => {});
+
     const { data, error } = await supabase
       .from('scrap_items')
       .select('*')

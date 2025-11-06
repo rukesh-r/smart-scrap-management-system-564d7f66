@@ -10,7 +10,7 @@ import { toast } from '@/hooks/use-toast';
 import { useTranslation } from '@/hooks/useTranslation';
 
 const ProfileCompletionDialog = () => {
-  const { profile, refreshProfile } = useAuth();
+  const { profile, refreshProfile, loading: authLoading } = useAuth();
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -21,16 +21,18 @@ const ProfileCompletionDialog = () => {
   });
 
   useEffect(() => {
-    if (profile) {
+    if (profile && !loading) {
       const isIncomplete = !profile.phone || !profile.address;
       setOpen(isIncomplete);
-      setFormData({
-        full_name: profile.full_name || '',
-        phone: profile.phone || '',
-        address: profile.address || '',
-      });
+      if (isIncomplete) {
+        setFormData({
+          full_name: profile.full_name || '',
+          phone: profile.phone || '',
+          address: profile.address || '',
+        });
+      }
     }
-  }, [profile]);
+  }, [profile, loading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

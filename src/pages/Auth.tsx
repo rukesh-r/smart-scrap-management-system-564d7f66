@@ -124,13 +124,10 @@ const Auth = () => {
       return;
     }
 
-    // Try to initiate password reset to check if email exists
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth`,
-    });
-
-    // If no error, email exists in the system
-    if (!resetError) {
+    // Check if email already exists
+    const { data: emailExists } = await supabase.rpc('check_email_exists', { user_email: email });
+    
+    if (emailExists) {
       toast({
         title: 'Email Already Registered',
         description: 'This email is already registered. Please sign in or use a different email.',
@@ -143,8 +140,8 @@ const Auth = () => {
     const { error } = await signUp(email, password, fullName);
 
     if (error) {
-      // Check if error is due to duplicate email
-      if (error.message.includes('already registered') || error.message.includes('already been registered')) {
+      await supabase.auth.signOut({ scope: 'local' });
+      if (error.message.includes('already registered') || error.message.includes('already been registered') || error.message.includes('User already registered')) {
         toast({
           title: 'Email Already Registered',
           description: 'This email is already registered. Please sign in or use a different email.',

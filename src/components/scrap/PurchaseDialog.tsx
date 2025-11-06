@@ -112,24 +112,17 @@ const PurchaseDialog = ({ open, onOpenChange, item, onSuccess }: PurchaseDialogP
         throw transactionError;
       }
 
-      const { data: updateData, error: updateError } = await supabase
+      const { error: updateError } = await supabase
         .from('scrap_items')
         .update({
           status: 'pending',
           actual_price: item.expected_price
         })
-        .eq('id', item.id)
-        .select();
-
-      console.log('Update result:', { updateData, updateError });
+        .eq('id', item.id);
 
       if (updateError) {
         console.error('Update error:', updateError);
         throw updateError;
-      }
-
-      if (!updateData || updateData.length === 0) {
-        throw new Error('Failed to update item status - no rows affected');
       }
 
       toast({

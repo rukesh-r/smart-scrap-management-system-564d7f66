@@ -24,6 +24,7 @@ export type Database = {
           location_info: Json | null
           login_method: string | null
           login_timestamp: string | null
+          logout_timestamp: string | null
           success: boolean | null
           user_agent: string | null
           user_id: string | null
@@ -37,6 +38,7 @@ export type Database = {
           location_info?: Json | null
           login_method?: string | null
           login_timestamp?: string | null
+          logout_timestamp?: string | null
           success?: boolean | null
           user_agent?: string | null
           user_id?: string | null
@@ -50,6 +52,7 @@ export type Database = {
           location_info?: Json | null
           login_method?: string | null
           login_timestamp?: string | null
+          logout_timestamp?: string | null
           success?: boolean | null
           user_agent?: string | null
           user_id?: string | null

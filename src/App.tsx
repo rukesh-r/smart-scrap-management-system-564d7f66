@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,14 +8,24 @@ import { I18nextProvider } from "react-i18next";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import i18n from "@/lib/i18n";
 import { NotificationListener } from "@/components/NotificationListener";
-import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import Dashboard from "./pages/Dashboard";
-import Settings from "./pages/Settings";
-import Profile from "./pages/Profile";
-import RoleSelection from "./pages/RoleSelection";
-import LoginHistory from "./pages/LoginHistory";
-import NotFound from "./pages/NotFound";
+
+const Index = lazy(() => import("./pages/Index"));
+const Auth = lazy(() => import("./pages/Auth"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Profile = lazy(() => import("./pages/Profile"));
+const RoleSelection = lazy(() => import("./pages/RoleSelection"));
+const LoginHistory = lazy(() => import("./pages/LoginHistory"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+
+const LoadingFallback = () => (
+  <div className="min-h-screen bg-background flex items-center justify-center">
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+      <p className="text-muted-foreground">Loading...</p>
+    </div>
+  </div>
+);
 
 const queryClient = new QueryClient();
 
@@ -69,17 +79,19 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <OAuthHandler />
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/role-selection" element={<RoleSelection />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/login-history" element={<LoginHistory />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <Suspense fallback={<LoadingFallback />}>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/role-selection" element={<RoleSelection />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/login-history" element={<LoginHistory />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
           </BrowserRouter>
         </TooltipProvider>
       </AuthProvider>

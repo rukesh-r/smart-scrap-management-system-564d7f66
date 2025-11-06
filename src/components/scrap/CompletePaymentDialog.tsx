@@ -101,24 +101,17 @@ const CompletePaymentDialog = ({ open, onOpenChange, item, onSuccess }: Complete
     setLoading(true);
 
     try {
-      // Update transaction to completed
-      const { error: txnError } = await supabase
-        .from('transactions')
-        .update({ 
-          status: 'completed',
-        })
-        .eq('id', transaction.id)
-        .eq('buyer_id', profile.user_id);
+      // Use database function to complete payment atomically
+      const { data, error } = await supabase.rpc('complete_payment', {
+        p_transaction_id: transaction.id,
+        p_buyer_id: profile.user_id
+      });
 
-      if (txnError) throw txnError;
-
-      // Update scrap item to sold
-      const { error: itemError } = await supabase
-        .from('scrap_items')
-        .update({ status: 'sold' })
-        .eq('id', item.id);
-
-      if (itemError) throw itemError;
+      if (error) throw error;
+      
+      if (!data?.success) {
+        throw new Error(data?.error || 'Failed to complete payment');
+      }
 
       toast({
         title: t('Payment Completed'),
@@ -127,11 +120,11 @@ const CompletePaymentDialog = ({ open, onOpenChange, item, onSuccess }: Complete
 
       onSuccess?.();
       onOpenChange(false);
-    } catch (error: unknown) {
+    } catch (error: any) {
       console.error('Complete payment error:', error);
       toast({
         title: t('Error'),
-        description: (error instanceof Error ? error.message : String(error)) || t('Failed to complete payment'),
+        description: error?.message || t('Failed to complete payment'),
         variant: 'destructive',
       });
     } finally {

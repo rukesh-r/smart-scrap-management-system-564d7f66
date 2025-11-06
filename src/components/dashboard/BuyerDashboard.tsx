@@ -122,6 +122,7 @@ const BuyerDashboard = () => {
         .from('scrap_items')
         .select('*')
         .in('id', itemIds)
+        .eq('status', 'sold')
         .order('created_at', { ascending: false });
 
       setPurchasedItems(items || []);

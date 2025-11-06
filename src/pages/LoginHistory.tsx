@@ -154,44 +154,60 @@ const LoginHistory = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>{t('Date & Time')}</TableHead>
-                      <TableHead>{t('Device Info')}</TableHead>
+                      <TableHead>{t('Login Time')}</TableHead>
+                      <TableHead>{t('Logout Time')}</TableHead>
+                      <TableHead>{t('Duration')}</TableHead>
                       <TableHead>{t('Login Method')}</TableHead>
                       <TableHead>{t('Status')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {loginHistory.map((entry) => (
-                      <TableRow key={entry.id}>
-                        <TableCell>
-                          {new Date(entry.login_timestamp).toLocaleString()}
-                        </TableCell>
-                        <TableCell>
-                          {entry.user_agent ? (
-                            <span className="text-xs text-muted-foreground">
-                              {entry.user_agent.substring(0, 50)}...
-                            </span>
-                          ) : (
-                            'N/A'
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <span className="text-xs capitalize">{entry.login_method || 'email'}</span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-1">
-                            {entry.success ? (
-                              <CheckCircle className="h-4 w-4 text-green-500" />
+                    {loginHistory.map((entry) => {
+                      const loginTime = new Date(entry.login_timestamp);
+                      const logoutTime = entry.logout_timestamp ? new Date(entry.logout_timestamp) : null;
+                      const duration = logoutTime ? Math.round((logoutTime.getTime() - loginTime.getTime()) / 60000) : null;
+                      
+                      return (
+                        <TableRow key={entry.id}>
+                          <TableCell>
+                            <div className="text-sm">{loginTime.toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}</div>
+                            <div className="text-xs text-muted-foreground">{loginTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}</div>
+                          </TableCell>
+                          <TableCell>
+                            {logoutTime ? (
+                              <>
+                                <div className="text-sm">{logoutTime.toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' })}</div>
+                                <div className="text-xs text-muted-foreground">{logoutTime.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}</div>
+                              </>
                             ) : (
-                              <XCircle className="h-4 w-4 text-red-500" />
+                              <span className="text-xs text-muted-foreground">{t('Active')}</span>
                             )}
-                            <span className="text-xs">
-                              {entry.success ? t('Success') : t('Failed')}
-                            </span>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                          </TableCell>
+                          <TableCell>
+                            {duration !== null ? (
+                              <span className="text-xs">{duration} {t('min')}</span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-xs capitalize">{entry.login_method || 'email'}</span>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              {entry.success ? (
+                                <CheckCircle className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <XCircle className="h-4 w-4 text-red-500" />
+                              )}
+                              <span className="text-xs">
+                                {entry.success ? t('Success') : t('Failed')}
+                              </span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
